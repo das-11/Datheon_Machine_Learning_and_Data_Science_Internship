@@ -1,87 +1,210 @@
-# Iris classification: Logistic Regression vs Decision Tree
+
+# ==========================================================
+# TASK 1: IRIS CLASSIFICATION
+# Logistic Regression vs Decision Tree
+# Datheon Machine Learning & Data Science Internship
+# ==========================================================
+
+# 1. Import libraries
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.inspection import DecisionBoundaryDisplay
-from sklearn.metrics import (accuracy_score, precision_score, recall_score,
-                             f1_score, confusion_matrix, classification_report)
 
-# ---------- 1. load the data ----------
-url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv"
-df = pd.read_csv(url)
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    classification_report
+)
 
+
+# 2. Create images folder
+
+os.makedirs("images", exist_ok=True)
+
+
+# 3. Load dataset
+
+df = pd.read_csv("iris.csv")
+
+print("\nDataset Shape:")
 print(df.shape)
+
+print("\nFirst Five Rows:")
 print(df.head())
-print(df.isnull().sum())          # checking for missing values
+
+print("\nDataset Information:")
+print(df.info())
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+print("\nSpecies Distribution:")
 print(df["species"].value_counts())
+
+print("\nStatistical Summary:")
 print(df.describe())
 
-# ---------- 2. pairplot ----------
-sns.pairplot(df, hue="species")
-plt.show()
-# setosa is clearly separated, versicolor and virginica overlap a bit
 
-# ---------- 3. split into X and y, then train/test (80/20) ----------
+# 4. Exploratory Data Analysis - Pairplot
+
+pair = sns.pairplot(df, hue="species")
+
+pair.figure.suptitle(
+    "Iris Dataset - Pairplot",
+    y=1.02
+)
+
+pair.savefig(
+    "images/pairplot.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+plt.savefig("pairplot.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+
+# 5. Separate features and target
+
 X = df.drop("species", axis=1)
 y = df["species"]
 
+
+# 6. Train-Test Split (80/20)
+
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y)
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
 
-# ---------- 4. scaling ----------
-# fit only on the training data, otherwise info from the test set leaks in
+print("\nTraining Data:", X_train.shape)
+print("Testing Data:", X_test.shape)
+
+
+# 7. Feature Scaling
+
 scaler = StandardScaler()
-X_train_sc = scaler.fit_transform(X_train)
-X_test_sc = scaler.transform(X_test)
 
-# ---------- 5. train both models ----------
+X_train_scaled = scaler.fit_transform(X_train)
+
+X_test_scaled = scaler.transform(X_test)
+
+
+# 8. Train Logistic Regression Model
+
 log_reg = LogisticRegression(max_iter=200)
-log_reg.fit(X_train_sc, y_train)
 
-tree = DecisionTreeClassifier(max_depth=3, random_state=42)
-tree.fit(X_train_sc, y_train)
+log_reg.fit(X_train_scaled, y_train)
 
-lr_pred = log_reg.predict(X_test_sc)
-dt_pred = tree.predict(X_test_sc)
+lr_pred = log_reg.predict(X_test_scaled)
 
-# ---------- 6. compare the metrics ----------
-def get_scores(y_true, y_pred):
-    # average="macro" since there are 3 classes
-    return [accuracy_score(y_true, y_pred),
-            precision_score(y_true, y_pred, average="macro"),
-            recall_score(y_true, y_pred, average="macro"),
-            f1_score(y_true, y_pred, average="macro")]
+
+# 9. Train Decision Tree Model
+
+tree = DecisionTreeClassifier(
+    max_depth=3,
+    random_state=42
+)
+
+tree.fit(X_train_scaled, y_train)
+
+dt_pred = tree.predict(X_test_scaled)
+
+
+# 10. Model Evaluation
+
+def evaluate_model(y_true, y_pred):
+
+    return [
+        accuracy_score(y_true, y_pred),
+        precision_score(
+            y_true, y_pred, average="macro"
+        ),
+        recall_score(
+            y_true, y_pred, average="macro"
+        ),
+        f1_score(
+            y_true, y_pred, average="macro"
+        )
+    ]
+
 
 results = pd.DataFrame(
-    [get_scores(y_test, lr_pred), get_scores(y_test, dt_pred)],
-    index=["Logistic Regression", "Decision Tree"],
-    columns=["Accuracy", "Precision", "Recall", "F1-score"])
+    [
+        evaluate_model(y_test, lr_pred),
+        evaluate_model(y_test, dt_pred)
+    ],
+    index=[
+        "Logistic Regression",
+        "Decision Tree"
+    ],
+    columns=[
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1-score"
+    ]
+)
+
+print("\nModel Performance Comparison:")
 print(results.round(3))
 
-print("\nLogistic Regression report")
+results.to_csv("model_comparison.csv")
+
+
+# 11. Classification Reports
+
+print("\nLogistic Regression Report:")
 print(classification_report(y_test, lr_pred))
-print("Decision Tree report")
+
+print("\nDecision Tree Report:")
 print(classification_report(y_test, dt_pred))
 
-# ---------- 7. confusion matrices ----------
+
+# 12. Confusion Matrix Heatmaps
+
 labels = ["setosa", "versicolor", "virginica"]
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-sns.heatmap(confusion_matrix(y_test, lr_pred, labels=labels), annot=True,
-            fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels,
-            ax=axes[0])
+sns.heatmap(
+    confusion_matrix(y_test, lr_pred, labels=labels),
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=labels,
+    yticklabels=labels,
+    ax=axes[0]
+)
+
 axes[0].set_title("Logistic Regression")
 
-sns.heatmap(confusion_matrix(y_test, dt_pred, labels=labels), annot=True,
-            fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels,
-            ax=axes[1])
+sns.heatmap(
+    confusion_matrix(y_test, dt_pred, labels=labels),
+    annot=True,
+    fmt="d",
+    cmap="Greens",
+    xticklabels=labels,
+    yticklabels=labels,
+    ax=axes[1]
+)
+
 axes[1].set_title("Decision Tree")
 
 for ax in axes:
@@ -89,40 +212,119 @@ for ax in axes:
     ax.set_ylabel("Actual")
 
 plt.tight_layout()
+
+plt.savefig(
+    "images/confusion_matrix.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
+plt.savefig("confusion_matrix.png", dpi=300, bbox_inches="tight")
+plt.close()
 
-# ---------- 8. decision boundaries ----------
-# can only plot 2 features, so I use petal length and petal width here
-# (they separate the species best). The models are retrained on just these two.
-cols = ["petal_length", "petal_width"]
-sc2 = StandardScaler()
-X2_train = sc2.fit_transform(X_train[cols])
-X2_test = sc2.transform(X_test[cols])
 
-# the plot needs numbers for the classes, not names
-y_train_num = y_train.map({"setosa": 0, "versicolor": 1, "virginica": 2})
-y_test_num = y_test.map({"setosa": 0, "versicolor": 1, "virginica": 2})
+# 13. Decision Boundary Visualization
 
-lr2 = LogisticRegression(max_iter=200).fit(X2_train, y_train_num)
-dt2 = DecisionTreeClassifier(max_depth=3, random_state=42).fit(X2_train, y_train_num)
+# Use petal length and petal width
 
-fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+features = ["petal_length", "petal_width"]
 
-for ax, model, title in [(axes[0], lr2, "Logistic Regression"),
-                         (axes[1], dt2, "Decision Tree")]:
-    DecisionBoundaryDisplay.from_estimator(model, X2_train, cmap="Set2",
-                                           alpha=0.5, ax=ax)
-    ax.scatter(X2_test[:, 0], X2_test[:, 1], c=y_test_num, cmap="Set2",
-               edgecolor="black")
+X_train_2 = X_train[features]
+X_test_2 = X_test[features]
+
+# Scale selected features
+
+scaler_2 = StandardScaler()
+
+X_train_2_scaled = scaler_2.fit_transform(X_train_2)
+
+X_test_2_scaled = scaler_2.transform(X_test_2)
+
+# Convert species names into numerical labels
+
+species_mapping = {
+    "setosa": 0,
+    "versicolor": 1,
+    "virginica": 2
+}
+
+y_train_num = y_train.map(species_mapping)
+y_test_num = y_test.map(species_mapping)
+
+# Train models using two features
+
+lr_2 = LogisticRegression(max_iter=200)
+
+lr_2.fit(X_train_2_scaled, y_train_num)
+
+dt_2 = DecisionTreeClassifier(
+    max_depth=3,
+    random_state=42
+)
+
+dt_2.fit(X_train_2_scaled, y_train_num)
+
+
+# Plot decision boundaries
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+models = [
+    (axes[0], lr_2, "Logistic Regression"),
+    (axes[1], dt_2, "Decision Tree")
+]
+
+for ax, model, title in models:
+
+    DecisionBoundaryDisplay.from_estimator(
+        model,
+        X_train_2_scaled,
+        cmap="Set2",
+        alpha=0.5,
+        ax=ax
+    )
+
+    ax.scatter(
+        X_test_2_scaled[:, 0],
+        X_test_2_scaled[:, 1],
+        c=y_test_num,
+        cmap="Set2",
+        edgecolor="black"
+    )
+
     ax.set_title(title)
-    ax.set_xlabel("Petal length (scaled)")
-    ax.set_ylabel("Petal width (scaled)")
+
+    ax.set_xlabel("Petal Length (Scaled)")
+    ax.set_ylabel("Petal Width (Scaled)")
 
 plt.tight_layout()
-plt.show()
 
-# ---------- Conclusion ----------
-# Both models do well. Setosa is classified perfectly, and almost all the
-# mistakes are between versicolor and virginica. The test set only has 30 rows,
-# so one wrong prediction changes accuracy by about 3%. The difference between
-# the two models is too small to say one is really better.
+plt.savefig(
+    "images/decision_boundaries.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+plt.savefig("decision_boundaries.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+
+# 14. Final Conclusion
+
+print("\n========== FINAL CONCLUSION ==========")
+
+print(results.round(3))
+
+print(
+    "\nBoth models were trained and evaluated "
+    "using the Iris dataset."
+)
+
+print(
+    "Performance was compared using Accuracy, "
+   "Precision")
+
+
+
