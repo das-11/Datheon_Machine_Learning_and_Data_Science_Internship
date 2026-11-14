@@ -1,0 +1,15 @@
+,OLS,Ridge,Lasso
+longitude,-53339.0,-53300.0,-53326.0
+latitude,-52325.0,-52293.0,-52313.0
+housing_median_age,2203.0,2187.0,2199.0
+median_income,89108.0,88992.0,89071.0
+rooms_per_household,17204.0,17161.0,17186.0
+bedrooms_per_room,21050.0,21042.0,21046.0
+population_per_household,-4350.0,-4349.0,-4349.0
+income_x_rooms,-21666.0,-21561.0,-21627.0
+income_x_age,13472.0,13503.0,13477.0
+ocean_proximity_<1H OCEAN,-23613.0,-18730.0,-3070.0
+ocean_proximity_INLAND,-57968.0,-53108.0,-37436.0
+ocean_proximity_ISLAND,117181.0,97648.0,133597.0
+ocean_proximity_NEAR BAY,-20543.0,-15641.0,0.0
+ocean_proximity_NEAR OCEAN,-15057.0,-10169.0,5477.0
